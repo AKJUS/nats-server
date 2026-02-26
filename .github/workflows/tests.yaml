@@ -154,14 +154,20 @@ jobs:
       pull-requests: write
       id-token: write
     steps:
-      - uses: anthropics/claude-code-action@v1
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Request review
+        uses: anthropics/claude-code-action@v1
         if: env.HAS_TOKEN == 'true'
         env:
           HAS_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' }}
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           claude_args: --model opus
-          prompt: "Review this pull request and provide concise feedback on code quality, potential bugs, security issues or suggestions for improvement."
+          plugin_marketplaces: "https://github.com/anthropics/claude-code.git"
+          plugins: "code-review@claude-code-plugins"
+          prompt: "/code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }}"
 
   store:
     name: Test Stores
