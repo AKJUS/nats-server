@@ -5043,7 +5043,7 @@ func (js *jetStream) processClusterCreateStream(acc *Account, sa *streamAssignme
 			}
 		} else if err == NewJSStreamNotFoundError() {
 			// Add in the stream here.
-			mset, err = acc.addStreamWithAssignment(sa.Config, nil, sa, false)
+			mset, err = acc.addStreamWithAssignment(sa.Config, nil, sa, false, false)
 		}
 		if mset != nil {
 			mset.setCreatedTime(created)
@@ -7526,13 +7526,16 @@ func (js *jetStream) tieredStreamAndReservationCount(accName, tier string, cfg *
 	var reservation int64
 	for sa := range js.streamAssignmentsOrInflightSeq(accName) {
 		// Don't count the stream toward the limit if it already exists.
-		if (tier == _EMPTY_ || isSameTier(sa.Config, cfg)) && sa.Config.Name != cfg.Name {
+		if sa.Config.Name == cfg.Name {
+			continue
+		}
+		if tier == _EMPTY_ || isSameTier(sa.Config, cfg) {
 			numStreams++
 			if sa.Config.MaxBytes > 0 && sa.Config.Storage == cfg.Storage {
 				// If tier is empty, all storage is flat and we should adjust for replicas.
 				// Otherwise if tiered, storage replication already taken into consideration.
-				if tier == _EMPTY_ && cfg.Replicas > 1 {
-					reservation += sa.Config.MaxBytes * int64(cfg.Replicas)
+				if tier == _EMPTY_ && sa.Config.Replicas > 1 {
+					reservation += sa.Config.MaxBytes * int64(sa.Config.Replicas)
 				} else {
 					reservation += sa.Config.MaxBytes
 				}
